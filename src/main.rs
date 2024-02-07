@@ -1,9 +1,17 @@
 #[macro_use]
 extern crate rocket;
 
-mod handlers;
+pub mod handlers;
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![handlers::user::index])
+    rocket::build()
+        .mount(
+            "/posts",
+            routes![handlers::post::list, handlers::post::create_post],
+        )
+        .mount(
+            "/users",
+            routes![handlers::user::list, handlers::user::create_user],
+        )
 }
