@@ -12,3 +12,6 @@ dotenvy = "0.15"
 serde = { version = "1.0.196", features = ["derive"] }
 chrono = "0.4.33"
 bcrypt = "0.15.0"
+rocket-jwt = "0.5.2"
+jsonwebtoken = "9.2.0"
+once_cell = "1.19.0"

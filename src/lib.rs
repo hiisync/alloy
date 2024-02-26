@@ -4,6 +4,7 @@ use diesel::{Connection, PgConnection as DB};
 use dotenvy::dotenv;
 use std::env;
 
+pub mod middleware;
 pub mod models;
 pub mod schema;
 

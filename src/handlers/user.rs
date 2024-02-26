@@ -3,7 +3,20 @@ use self::schema::users::dsl::*;
 use alloy::*;
 use bcrypt::{hash, DEFAULT_COST};
 use diesel::prelude::*;
-use rocket::serde::json::{json, Json, Value};
+use rocket::{
+    http::Status,
+    serde::json::{json, Json, Value},
+};
+use serde::Deserialize;
+
+use middleware::auth::UserClaim;
+
+// Credentials
+#[derive(Debug, Deserialize)]
+pub struct Credentials {
+    pub username: String,
+    pub password: String,
+}
 
 // Users list
 #[get("/")]
@@ -43,5 +56,77 @@ pub fn create_user(mut new_user: Json<NewUser>) -> Json<Value> {
         "email": inserted_user.email,
         "created_at": inserted_user.created_at,
         "updated_at": inserted_user.updated_at
+    }))
+}
+
+#[post("/auth", format = "json", data = "<credentials>")]
+pub fn auth(credentials: Json<Credentials>) -> Result<Json<Value>, Status> {
+    let connection: &mut PgConnection = &mut connect_db();
+    let results = users
+        .filter(username.eq(&credentials.username))
+        .select(User::as_select())
+        .load::<User>(connection)
+        .expect("Error loading users");
+
+    if results.is_empty() {
+        return Err(Status::Unauthorized);
+    }
+
+    let user = results.into_iter().next().expect("User not found");
+
+    let user_claim = UserClaim {
+        id: user.id.to_string(),
+    };
+
+    let token = UserClaim::sign(user_claim);
+
+    match bcrypt::verify(&credentials.password, &user.password) {
+        Ok(true) => Ok(Json(json!({
+           "access_token": token
+        }))),
+        Ok(false) => Err(Status::Unauthorized),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+// get user by id
+#[get("/<user_id>")]
+pub fn get(user_id: i32) -> Result<Json<Value>, Status> {
+    let connection: &mut PgConnection = &mut connect_db();
+    let results = users
+        .filter(id.eq(user_id))
+        .select(User::as_select())
+        .load::<User>(connection)
+        .expect("Error loading users");
+
+    if results.is_empty() {
+        return Err(Status::NotFound);
+    }
+
+    let user = results.into_iter().next().expect("User not found");
+
+    Ok(Json(json!({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email
+    })))
+}
+
+// User profile
+#[get("/me")]
+pub fn me(user: UserClaim) -> Json<Value> {
+    let connection: &mut PgConnection = &mut connect_db();
+    let results = users
+        .filter(id.eq(user.id.parse::<i32>().unwrap()))
+        .select(User::as_select())
+        .load::<User>(connection)
+        .expect("Error loading users");
+
+    let user = results.into_iter().next().expect("User not found");
+
+    Json(json!({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email
     }))
 }
