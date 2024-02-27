@@ -19,6 +19,8 @@ fn rocket() -> _ {
                 handlers::user::create_user,
                 handlers::user::auth,
                 handlers::user::me,
+                handlers::user::get,
+                handlers::user::verify
             ],
         )
 }

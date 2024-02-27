@@ -61,25 +61,28 @@ pub fn create_user(mut new_user: Json<NewUser>) -> Json<Value> {
 
 #[post("/auth", format = "json", data = "<credentials>")]
 pub fn auth(credentials: Json<Credentials>) -> Result<Json<Value>, Status> {
+    // Verify the username
     let connection: &mut PgConnection = &mut connect_db();
     let results = users
         .filter(username.eq(&credentials.username))
         .select(User::as_select())
         .load::<User>(connection)
         .expect("Error loading users");
-
+    // Return an error if the username is not found
     if results.is_empty() {
         return Err(Status::Unauthorized);
     }
 
     let user = results.into_iter().next().expect("User not found");
 
+    // Create the token
     let user_claim = UserClaim {
         id: user.id.to_string(),
     };
 
     let token = UserClaim::sign(user_claim);
 
+    // Verify the password
     match bcrypt::verify(&credentials.password, &user.password) {
         Ok(true) => Ok(Json(json!({
            "access_token": token
@@ -92,6 +95,7 @@ pub fn auth(credentials: Json<Credentials>) -> Result<Json<Value>, Status> {
 // get user by id
 #[get("/<user_id>")]
 pub fn get(user_id: i32) -> Result<Json<Value>, Status> {
+    // Get the user from the database
     let connection: &mut PgConnection = &mut connect_db();
     let results = users
         .filter(id.eq(user_id))
@@ -99,12 +103,14 @@ pub fn get(user_id: i32) -> Result<Json<Value>, Status> {
         .load::<User>(connection)
         .expect("Error loading users");
 
+    // Return an error if the user is not found
     if results.is_empty() {
         return Err(Status::NotFound);
     }
 
     let user = results.into_iter().next().expect("User not found");
 
+    // Return the user object
     Ok(Json(json!({
         "id": user.id,
         "username": user.username,
@@ -115,6 +121,7 @@ pub fn get(user_id: i32) -> Result<Json<Value>, Status> {
 // User profile
 #[get("/me")]
 pub fn me(user: UserClaim) -> Json<Value> {
+    // Get the user from the database
     let connection: &mut PgConnection = &mut connect_db();
     let results = users
         .filter(id.eq(user.id.parse::<i32>().unwrap()))
@@ -124,9 +131,19 @@ pub fn me(user: UserClaim) -> Json<Value> {
 
     let user = results.into_iter().next().expect("User not found");
 
+    // Return the user object
     Json(json!({
         "id": user.id,
         "username": user.username,
         "email": user.email
     }))
+}
+
+// Verify token route
+#[post("/verify")]
+pub fn verify(_user: UserClaim) -> Result<Json<Value>, Status> {
+    // if token is valid, return status 200 and json with message
+    Ok(Json(json!({
+        "message": "Token is valid"
+    })))
 }
