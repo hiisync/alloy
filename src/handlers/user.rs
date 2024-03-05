@@ -37,7 +37,7 @@ pub fn list() -> Json<Value> {
 }
 
 // Create a new user
-#[post("/store", format = "json", data = "<new_user>")]
+#[post("/auth/register", format = "json", data = "<new_user>")]
 pub fn create_user(mut new_user: Json<NewUser>) -> Json<Value> {
     let connection: &mut PgConnection = &mut connect_db();
 
@@ -59,7 +59,7 @@ pub fn create_user(mut new_user: Json<NewUser>) -> Json<Value> {
     }))
 }
 
-#[post("/auth", format = "json", data = "<credentials>")]
+#[post("/auth/login", format = "json", data = "<credentials>")]
 pub fn auth(credentials: Json<Credentials>) -> Result<Json<Value>, Status> {
     // Verify the username
     let connection: &mut PgConnection = &mut connect_db();
