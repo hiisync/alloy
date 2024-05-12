@@ -141,9 +141,9 @@ pub fn me(user: UserClaim) -> Json<Value> {
 
 // Verify token route
 #[post("/verify")]
-pub fn verify(_user: UserClaim) -> Result<Json<Value>, Status> {
+pub fn verify(user: UserClaim) -> Result<Json<Value>, Status> {
     // if token is valid, return status 200 and json with message
     Ok(Json(json!({
-        "message": "Token is valid"
+        "message": user
     })))
 }
